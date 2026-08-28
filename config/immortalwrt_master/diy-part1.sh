@@ -12,3 +12,4 @@
 # Remove unnecessary packages
 # rm -rf package/emortal/{autosamba,ipv6-helper}
 
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
