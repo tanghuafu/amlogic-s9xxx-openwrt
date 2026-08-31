@@ -12,4 +12,7 @@
 # Remove unnecessary packages
 # rm -rf package/emortal/{autosamba,ipv6-helper}
 
-#git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+echo "CONFIG_PACKAGE_luci-app-oaf=y" >> .config
+echo "CONFIG_PACKAGE_open-app-filter=y" >> .config
+echo "CONFIG_PACKAGE_kmod-oaf=y" >> .config
