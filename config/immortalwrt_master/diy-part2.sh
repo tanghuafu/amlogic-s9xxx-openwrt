@@ -49,6 +49,11 @@ fi
 rm -rf package/luci-app-amlogic
 git clone -b main https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 #
+#!/bin/bash
+echo "===== diy-part2 start ====="
+rm -rf ${GITHUB_WORKSPACE}/openwrt/package/luci-app-openvpn-server
+echo "===== diy-part2 end ====="
+
 # Apply patches
 # git apply ../config/patches/{0001*,0002*}.patch --directory=feeds/luci
 #
