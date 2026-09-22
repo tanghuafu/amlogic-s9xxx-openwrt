@@ -18,3 +18,12 @@ git clone https://github.com/sirpdboy/luci-app-lucky.git package/luci-app-lucky
 echo "CONFIG_PACKAGE_luci-app-oaf=y" >> .config
 echo "CONFIG_PACKAGE_open-app-filter=y" >> .config
 echo "CONFIG_PACKAGE_kmod-oaf=y" >> .config
+
+echo "===== diy-part1 start ====="
+rm -rf ${GITHUB_WORKSPACE}/openwrt/feeds/luci/applications/luci-app-openvpn-server
+cd ${GITHUB_WORKSPACE}/openwrt/package
+git clone --depth=1 --branch openwrt-23.05 https://github.com/openwrt/luci.git luci_tmp
+cp -r luci_tmp/applications/luci-app-openvpn ./
+rm -rf luci_tmp
+cd ${GITHUB_WORKSPACE}/openwrt
+echo "===== diy-part1 end ====="
