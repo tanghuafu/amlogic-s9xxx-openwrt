@@ -50,9 +50,47 @@ rm -rf package/luci-app-amlogic
 git clone -b main https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 #
 #!/bin/bash
-echo "===== diy-part2 start ====="
-rm -rf ${GITHUB_WORKSPACE}/openwrt/package/luci-app-openvpn-server
-echo "===== diy-part2 end ====="
+#========================================================================================================================
+# https://github.com/ophub/amlogic-s9xxx-openwrt
+# Description: Automatically Build OpenWrt
+# Function: DIY-Part 2 script (After updating feeds and install)
+# Source code repository: https://github.com/immortalwrt/immortalwrt / Branch: master
+#========================================================================================================================
+
+OPENWRT_ROOT="${GITHUB_WORKSPACE}/openwrt"
+cd "${OPENWRT_ROOT}" || exit 1
+
+# --------------------------
+# 1. 取消旧 luci-app-openvpn-server 编译选项
+# --------------------------
+sed -i 's/^CONFIG_PACKAGE_luci-app-openvpn-server=y/# CONFIG_PACKAGE_luci-app-openvpn-server is not set/' .config
+
+# --------------------------
+# 2. 删除 feeds 里旧 luci-app-openvpn-server 源码目录
+# --------------------------
+OLD_OVPN_LUCI="${OPENWRT_ROOT}/feeds/luci/applications/luci-app-openvpn-server"
+if [ -d "${OLD_OVPN_LUCI}" ]; then
+    rm -rf "${OLD_OVPN_LUCI}"
+fi
+
+# --------------------------
+# 3. 拉取 23.05 版 luci-app-openvpn（新版合一界面，客户端+服务端）
+# --------------------------
+NEW_OVPN_DIR="${OPENWRT_ROOT}/package/luci-app-openvpn"
+if [ ! -d "${NEW_OVPN_DIR}" ]; then
+    cd "${OPENWRT_ROOT}/package"
+    git clone --depth=1 --branch openwrt-23.05 https://github.com/openwrt/luci.git luci_tmp
+    cp -r luci_tmp/applications/luci-app-openvpn ./
+    rm -rf luci_tmp
+    cd "${OPENWRT_ROOT}"
+fi
+
+# --------------------------
+# 4. 选中新版 luci-app-openvpn
+# --------------------------
+sed -i 's/^# CONFIG_PACKAGE_luci-app-openvpn is not set/CONFIG_PACKAGE_luci-app-openvpn=y/' .config
+grep -q "CONFIG_PACKAGE_luci-app-openvpn=y" .config || echo "CONFIG_PACKAGE_luci-app-openvpn=y" >> .config
+
 
 # Apply patches
 # git apply ../config/patches/{0001*,0002*}.patch --directory=feeds/luci
