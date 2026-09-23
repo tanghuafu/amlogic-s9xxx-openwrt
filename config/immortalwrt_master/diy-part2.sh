@@ -50,22 +50,30 @@ rm -rf package/luci-app-amlogic
 git clone -b main https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 #
 # Apply patches
-
-# ===================== OpenVPN 2.6.12 替换新版 =====================
-# 1. 删除 feeds 自带新版 openvpn 包，防止编译优先选中新版
 rm -rf feeds/packages/net/openvpn
 
-# 2. 清理本地旧 package/openvpn
+# 2. 清理本地旧package/openvpn
 rm -rf package/openvpn
 
-# 3. 拉取 OpenVPN 上游源码 v2.6.12
+# 3. 拉 OpenVPN v2.6.12 上游源码
 git clone --depth=1 -b v2.6.12 https://github.com/OpenVPN/openvpn.git package/openvpn
 
-# 4. 拉取 OpenWrt 23.05 packages，复制配套 OpenVPN Makefile、uci 脚本等打包文件
+# 4. 从 openwrt-23.05 拉配套Makefile、uci脚本
 rm -rf /tmp/openvpn-feed-tmp
 git clone --depth=1 -b openwrt-23.05 https://github.com/openwrt/packages.git /tmp/openvpn-feed-tmp
 cp -r /tmp/openvpn-feed-tmp/net/openvpn/* package/openvpn/
 rm -rf /tmp/openvpn-feed-tmp
+
+# ===================== 拉取经典 luci-app-openvpn（服务端+客户端一体） =====================
+# 删除可能存在的 luci-app-openvpn-server，避免被编译进去
+rm -rf feeds/luci/applications/luci-app-openvpn-server
+rm -rf package/luci-app-openvpn-server
+
+# 拉取 23.05 分支的 luci-app-openvpn（原版经典UI，兼容UCI /etc/config/openvpn）
+rm -rf package/luci-app-openvpn
+git clone --depth=1 -b openwrt-23.05 https://github.com/openwrt/luci.git /tmp/luci-old
+cp -r /tmp/luci-old/applications/luci-app-openvpn package/luci-app-openvpn
+rm -rf /tmp/luci-old
 # git apply ../config/patches/{0001*,0002*}.patch --directory=feeds/luci
 #
 # ------------------------------- Additional customizations ends -------------------------------
