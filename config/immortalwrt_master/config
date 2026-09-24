@@ -8676,7 +8676,7 @@ CONFIG_PACKAGE_kmod-ovpn-backports=y
 CONFIG_PACKAGE_luci-app-zerotier=y
 CONFIG_PACKAGE_luci-app-lucky=y
 CONFIG_PACKAGE_luci-proto-openvpn=y
-CONFIG_PACKAGE_luci-app-openvpn=y
+CONFIG_PACKAGE_luci-app-openvpn-server=y
 CONFIG_PACKAGE_openvpn-openssl=y
-CONFIG_PACKAGE_kmod-tun=y
+#CONFIG_PACKAGE_kmod-tun=y
 
