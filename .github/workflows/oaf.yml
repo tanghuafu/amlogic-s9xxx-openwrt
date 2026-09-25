@@ -1,0 +1,155 @@
+name: Build OAF.ko for armsr/armv8 6.12
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: '6.12.109-ophub'
+        required: false
+        default: '6.12.109'
+      target_board:
+        description: 'Target平台'
+        required: false
+        default: 'armsr'
+      subtarget:
+        description: 'Subtarget'
+        required: false
+        default: 'armv8'
+
+jobs:
+  build-oaf:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev \
+            git wget curl rsync unzip python3 python3-pip cmake ca-certificates file
+
+      - name: 拉取 ImmortalWrt 源码
+        run: |
+          git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
+          cd openwrt
+          git checkout master
+
+      - name: 拉取 OAF 源码
+        run: |
+          cd openwrt
+          rm -rf package/OpenAppFilter
+          git clone --depth 1 https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+          echo "--- OAF目录结构 ---"
+          ls -la package/OpenAppFilter/
+          echo "--- OAF Makefile ---"
+          find package/OpenAppFilter -name "Makefile" | head -10
+
+      - name: 更新feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: 配置编译目标
+        run: |
+          cd openwrt
+          rm -f .config
+          
+          # 写入基础配置
+          cat > .config << EOF
+          CONFIG_TARGET_armsr=y
+          CONFIG_TARGET_armsr_armv8=y
+          CONFIG_TARGET_BOARD="armsr"
+          CONFIG_TARGET_SUBTARGET="armv8"
+          CONFIG_TARGET_PROFILE="Generic"
+          CONFIG_PACKAGE_kmod-oaf=m
+          CONFIG_PACKAGE_open-app-filter=m
+          CONFIG_PACKAGE_luci-app-oaf=m
+          CONFIG_HAVE_KERNEL_GZIP=y
+          CONFIG_KERNEL_GZIP=y
+          EOF
+          
+          make defconfig
+          
+          echo "--- 验证OAF配置 ---"
+          grep -i oaf .config || (echo "❌ kmod-oaf 未被选中！" && exit 1)
+
+      - name: 下载工具链
+        run: |
+          cd openwrt
+          make tools/install -j$(nproc)
+          make toolchain/install -j$(nproc)
+
+      - name: 编译 kmod-oaf 模块
+        run: |
+          cd openwrt
+          make package/oaf/clean V=s || true
+          make package/oaf/compile -j$(nproc) V=s 2>&1 | tee build_oaf.log
+          
+          # 检查编译结果
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ 编译失败！错误日志："
+            tail -200 build_oaf.log
+            exit 1
+          fi
+
+      - name: 查找产出文件
+        run: |
+          cd openwrt
+          echo "--- 查找 oaf.ko ---"
+          find bin/ -name "oaf.ko"
+          echo "--- 查找 kmod-oaf ipk ---"
+          find bin/ -name "*kmod-oaf*.ipk"
+          echo "--- 查找所有oaf相关 ---"
+          find . -name "*oaf*" -type f | grep -v ".git" | head -30
+
+      - name: 提取 oaf.ko
+        run: |
+          mkdir -p output
+          cd openwrt
+          
+          # 找ipk
+          IPK_FILE=$(find bin/ -name "*kmod-oaf*.ipk" | head -1)
+          
+          if [ -z "$IPK_FILE" ]; then
+            echo "❌ 没找到 kmod-oaf ipk！"
+            echo "可能原因："
+            echo "1. OAF源码不兼容当前内核版本"
+            echo "2. Makefile里包名不是oaf"
+            echo "3. 编译过程中OAF被自动跳过"
+            exit 1
+          fi
+          
+          echo "✅ 找到ipk: $IPK_FILE"
+          cp "$IPK_FILE" ../output/
+          
+          # 解压ipk提取ko
+          cd ../output
+          ar x "$IPK_FILE"
+          tar -xzf data.tar.gz
+          
+          echo "--- 解压内容 ---"
+          find . -type f
+          
+          # 复制ko到根目录
+          find . -name "oaf.ko" -exec cp {} ./oaf.ko \;
+          
+          if [ -f oaf.ko ]; then
+            echo "✅ oaf.ko 提取成功！"
+            file oaf.ko
+            ls -lh oaf.ko
+          else
+            echo "⚠️ 没找到oaf.ko，检查ipk内容"
+          fi
+
+      - name: 上传产物到 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oaf-kernel-module
+          path: |
+            output/oaf.ko
+            output/*.ipk
+          retention-days: 7
