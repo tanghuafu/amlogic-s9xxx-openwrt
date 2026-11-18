@@ -49,8 +49,32 @@ fi
 rm -rf package/luci-app-amlogic
 git clone -b main https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 
+
+
+
+# 加入 dockerd + Dockerman
 echo "CONFIG_PACKAGE_dockerd=y" >> .config
 echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> .config
+
+# 准备files目录，放自定义配置
+mkdir -p files/etc/docker
+mkdir -p files/etc
+
+# docker配置：关闭iptables、不创建docker0网桥
+cat > files/etc/docker/daemon.json <<EOF
+{
+  "iptables": false,
+  "ip6tables": false,
+  "bridge": "none"
+}
+EOF
+
+# 修复Ophub经典LAN互访坑：关闭bridge转发到iptables
+cat >> files/etc/sysctl.conf <<EOF
+net.bridge.bridge-nf-call-iptables=0
+net.bridge.bridge-nf-call-ip6tables=0
+EOF
+
 #
 
 # git apply ../config/patches/{0001*,0002*}.patch --directory=feeds/luci
