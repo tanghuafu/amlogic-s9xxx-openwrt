@@ -6,9 +6,7 @@
 # Source code repository: https://github.com/immortalwrt/immortalwrt / Branch: master
 #========================================================================================================================
 
-export openwrt_kernel="6.18.53-ophub"
-export auto_kernel="false"
-export kernel_usage="stable"
+
 
 # Add a custom feed source
 # sed -i '$a src-git lienol https://github.com/Lienol/openwrt-package' feeds.conf.default
