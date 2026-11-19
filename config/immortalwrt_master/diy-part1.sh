@@ -24,3 +24,42 @@ sed -i 's/^# CONFIG_PACKAGE_kmod-oaf is not set/CONFIG_PACKAGE_kmod-oaf=y/' .con
 grep -q "CONFIG_PACKAGE_luci-app-oaf=y" .config || echo "CONFIG_PACKAGE_luci-app-oaf=y" >> .config
 grep -q "CONFIG_PACKAGE_open-app-filter=y" .config || echo "CONFIG_PACKAGE_open-app-filter=y" >> .config
 grep -q "CONFIG_PACKAGE_kmod-oaf=y" .config || echo "CONFIG_PACKAGE_kmod-oaf=y" >> .config
+
+
+# 2. 写入6.18内核适配补丁（解决netfilter接口报错）
+cat > package/OpenAppFilter/patches/0001-fix-kernel6.18-compat.patch <<'EOF'
+diff --git a/src/oaf_hook.c b/src/oaf_hook.c
+index 0958872..2892c01 100644
+--- a/src/oaf_hook.c
++++ b/src/oaf_hook.c
+@@ -12,7 +12,7 @@
+ #include <linux/netfilter.h>
+ #include <linux/netfilter_ipv4.h>
+ #include <linux/netfilter_ipv6.h>
+-#include <net/netfilter/nf_conntrack.h>
++#include <net/netfilter/nf_conntrack.h>
+ #include <net/netfilter/nf_conntrack_core.h>
+ #include <linux/ip.h>
+ #include <linux/ipv6.h>
+@@ -120,7 +120,7 @@ static unsigned int oaf_hook(void *priv,
+ 	struct sk_buff *skb = pf->skb;
+ 	struct nf_hook_state *state = pf->state;
+ #else
+-static unsigned int oaf_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
++static unsigned int oaf_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+ #endif
+ {
+ 	if (!skb) return NF_ACCEPT;
+@@ -210,7 +210,7 @@ static struct nf_hook_ops oaf_hook_ops[] = {
+ 	},
+ };
+
+-static int oaf_nf_register(void)
++static int oaf_nf_register(void)
+ {
+ 	int ret;
+ 	ret = nf_register_hooks(oaf_hook_ops, ARRAY_SIZE(oaf_hook_ops));
+EOF
+
+# 3. 给OAF Makefile补充内核版本兼容标记（关键，防止openwrt buildsystem过滤kmod）
+sed -i 's/KCONFIG:=CONFIG_OAF/KCONFIG:=CONFIG_PACKAGE_kmod-oaf/g' package/OpenAppFilter/src/Makefile
